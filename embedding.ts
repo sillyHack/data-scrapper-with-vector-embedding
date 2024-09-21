@@ -1,7 +1,7 @@
 import { neon } from "@neondatabase/serverless";
 import OpenAI from "openai";
 import * as dotenv from "dotenv";
-import { TextFile, TextFileToken } from "./types";
+import { TextFile, TextFileWithToken } from "./types";
 dotenv.config();
 import fs from "fs/promises";
 import { Tiktoken } from "@dqbd/tiktoken";
@@ -93,8 +93,8 @@ async function processFiles(folder: string): Promise<TextFile[]> {
 	return files;
 }
 
-const tiktokenizer = async (files: TextFile[]): Promise<TextFileToken[]> => {
-	const textFilesTokens: TextFileToken[] = [];
+const tiktokenizer = async (files: TextFile[]): Promise<TextFileWithToken[]> => {
+	const textFilesTokens: TextFileWithToken[] = [];
 
 	for (const file of files) {
 		const token = encoding.encode(file.text);
@@ -108,22 +108,22 @@ const tiktokenizer = async (files: TextFile[]): Promise<TextFileToken[]> => {
 	return textFilesTokens;
 };
 
-async function splitTexts(texts: TextFileToken[]): Promise<TextFile[]> {
-	const shortened: TextFile[] = [];
+async function splitTexts(textFilesWithToken: TextFileWithToken[]): Promise<TextFile[]> {
+	const shortenedTextFiles: TextFile[] = [];
 
-	for (const file of texts) {
-		if (file.token.length > MAX_TOKENS) {
-			const chunks = await splitTextToMany(file);
-			shortened.push(...chunks);
+	for (const textFile of textFilesWithToken) {
+		if (textFile.token.length > MAX_TOKENS) {
+			const chunks = await splitTextToMany(textFile);
+			shortenedTextFiles.push(...chunks);
 		} else {
-			shortened.push(file);
+			shortenedTextFiles.push(textFile);
 		}
 	}
 
-	return shortened;
+	return shortenedTextFiles;
 }
 
-async function splitTextToMany(text: TextFileToken): Promise<TextFile[]> {
+async function splitTextToMany(text: TextFileWithToken): Promise<TextFile[]> {
 	const sentences = text.text
 		.split(". ")
 		.map((sentence) => ({
@@ -160,7 +160,7 @@ async function splitTextToMany(text: TextFileToken): Promise<TextFile[]> {
 	const chunks: TextFile[] = [];
 
 	let tokensSoFar = 0;
-	let currentChunks: TextFileToken[] = [];
+	let currentChunks: TextFileWithToken[] = [];
 
 	for (const sentence of sentences) {
 		const numberToken = sentence.numberTokens;

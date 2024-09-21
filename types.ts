@@ -3,6 +3,6 @@ export type TextFile = {
     text: string
 }
 
-export type TextFileToken = TextFile & {
+export type TextFileWithToken = TextFile & {
     token: Uint32Array;
   };
