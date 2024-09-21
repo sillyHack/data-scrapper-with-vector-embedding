@@ -55,6 +55,7 @@ const MAX_TOKENS = 500;
         "processed/textsEmbeddings.json"
     );
 	// Step 5 : Sauvegarder nos embeddings dans la base de données.
+	await saveToDatabase(textsEmbeddings);
 })();
 
 async function cache_withFile<T>(func: () => Promise<T>, filepath: string) {
@@ -223,4 +224,35 @@ async function processEmbeddings(texts: TextFileWithToken[]): Promise<TextFileWi
     }
 
     return embededs;
+}
+
+async function saveToDatabase(texts: TextFileWithTokenWithEmbedding[]) {
+	let totalSaved = 0;
+	let totalSkipped = 0;
+	for await (const textFile of texts) {
+		let { filepath, text, token, embedding } = textFile;
+
+		if(text.length < 100) {
+			totalSkipped++;
+			console.log(`Skipped ${filepath}`);
+			continue;
+		}
+
+		const VECTOR_SIZE = 1536;
+
+		const vectorPadded = new Array(VECTOR_SIZE).fill(0);
+		vectorPadded.splice(0, embedding.length, ...embedding);
+
+		const insertQuery = `
+			INSERT INTO documents (text, n_tokens, file_path, embeddings)
+			VALUES ($1, $2, $3, $4)
+		`;
+		const nTokens = Object.keys(token).length;
+
+		await sql(insertQuery, [text, nTokens, filepath, JSON.stringify(vectorPadded)]);
+		totalSaved++;
+
+		console.log(`Saved ${filepath} : ${totalSaved} / ${texts.length}`);
+	}
+	console.log(`Skipped ${totalSkipped} / ${texts.length}`);
 }
