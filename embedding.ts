@@ -1,11 +1,12 @@
 import { neon } from "@neondatabase/serverless";
 import OpenAI from "openai";
 import * as dotenv from "dotenv";
-import { TextFile, TextFileWithToken } from "./types";
+import { TextFile, TextFileWithTokenWithEmbedding, TextFileWithToken } from "./types";
 dotenv.config();
 import fs from "fs/promises";
 import { Tiktoken } from "@dqbd/tiktoken";
 import cl100k_base from "@dqbd/tiktoken/encoders/cl100k_base.json";
+import { openai } from "./openai";
 
 const databaseUrl = process.env.DATABASE_URL;
 const openaiKey = process.env.OPENAI_KEY;
@@ -13,10 +14,6 @@ const openaiKey = process.env.OPENAI_KEY;
 if (!databaseUrl || !openaiKey) {
 	throw new Error("Missing environment variables");
 }
-
-const openai = new OpenAI({
-	apiKey: openaiKey,
-});
 
 const sql = neon(databaseUrl);
 
@@ -53,6 +50,10 @@ const MAX_TOKENS = 500;
 	// const textShortened = textsTokensShortened.map((t: any) => t.text).join(". ");
 
 	// Step 4 : Intégrer tous les textes (embed).
+    const textsEmbeddings = await cache_withFile(
+        () => processEmbeddings(textsTokensShortened),
+        "processed/textsEmbeddings.json"
+    );
 	// Step 5 : Sauvegarder nos embeddings dans la base de données.
 })();
 
@@ -196,4 +197,30 @@ async function splitTextToMany(text: TextFileWithToken): Promise<TextFile[]> {
 	}
 
 	return chunks;
+}
+
+async function processEmbeddings(texts: TextFileWithToken[]): Promise<TextFileWithTokenWithEmbedding[]> {
+    const embededs: TextFileWithTokenWithEmbedding[] = [];
+
+    let i = 0;
+    
+    for await (const file of texts) {
+        const result = await openai.embeddings.create({
+            model: "text-embedding-ada-002",
+            input: file.text,
+            encoding_format: "float"
+        });
+
+        const embedding = result.data[0].embedding;
+
+        embededs.push({
+            ...file,
+            embedding
+        });
+        i++;
+
+        console.log(`Finished Embedding ${file.filepath} : ${i} / ${texts.length}`);
+    }
+
+    return embededs;
 }

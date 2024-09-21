@@ -1,8 +1,12 @@
 export type TextFile = {
-    filepath: string,
-    text: string
-}
+	filepath: string;
+	text: string;
+};
 
 export type TextFileWithToken = TextFile & {
-    token: Uint32Array;
-  };
+	token: Uint32Array;
+};
+
+export type TextFileWithTokenWithEmbedding = TextFileWithToken & {
+    embedding: number[];
+};
