@@ -114,7 +114,9 @@ async function splitTexts(textFilesWithToken: TextFileWithToken[]): Promise<Text
 	const shortenedTextFiles: TextFile[] = [];
 
 	for (const textFile of textFilesWithToken) {
-		if (textFile.token.length > MAX_TOKENS) {
+		const nbTokens = Object.keys(textFile.token).length;
+
+		if (nbTokens > MAX_TOKENS) {
 			const chunks = await splitTextToMany(textFile);
 			shortenedTextFiles.push(...chunks);
 		} else {
@@ -214,13 +216,15 @@ async function processEmbeddings(texts: TextFileWithToken[]): Promise<TextFileWi
 
         const embedding = result.data[0].embedding;
 
+		file.token = encoding.encode(file.text);
+
         embededs.push({
             ...file,
             embedding
         });
         i++;
 
-        console.log(`Finished Embedding ${file.filepath} : ${i} / ${texts.length}`);
+        console.log(`Finished Embedding ${file.filepath} with token length ${file.token.length} : ${i} / ${texts.length}`);
     }
 
     return embededs;
