@@ -1,5 +1,4 @@
-import { neon } from "@neondatabase/serverless";
-import OpenAI from "openai";
+const { neon } = require("@neondatabase/serverless");
 import * as dotenv from "dotenv";
 import { TextFile, TextFileWithTokenWithEmbedding, TextFileWithToken } from "./types";
 dotenv.config();
@@ -8,7 +7,7 @@ import { Tiktoken } from "@dqbd/tiktoken";
 import cl100k_base from "@dqbd/tiktoken/encoders/cl100k_base.json";
 import { openai } from "./openai";
 
-const databaseUrl = process.env.DATABASE_URL;
+const databaseUrl = process.env.VUEJS_DATABASE_URL;
 const openaiKey = process.env.OPENAI_KEY;
 
 if (!databaseUrl || !openaiKey) {
@@ -26,25 +25,25 @@ const encoding = new Tiktoken(
 const MAX_TOKENS = 500;
 
 (async function main() {
-	const FOLDER = "nextjs";
+	const FOLDER = "vuejs";
 
 	// Step 1 : Récupérer tous les textes avec leur nom de fichier.
 	const files = await cache_withFile(
 		() => processFiles(FOLDER),
-		"processed/texts.json"
+		"processed/vuejs/texts.json"
 	);
 	// console.log(files[0], files[1], files[2]);
 
 	// Step 2 : Tokenizer tous les textes.
 	const textTokens = await cache_withFile(
 		() => tiktokenizer(files),
-		"processed/texts_tokens.json"
+		"processed/vuejs/texts_tokens.json"
 	);
 
 	// Step 3 : Raccourcir tous les textes pour éviter qu'ils soient trop longs.
     const textsTokensShortened = await cache_withFile(
         () => splitTexts(textTokens),
-        "processed/textsTokensShortened.json"
+        "processed/vuejs/textsTokensShortened.json"
     );
 	// const textOriginal = textTokens[0].text;
 	// const textShortened = textsTokensShortened.map((t: any) => t.text).join(". ");
@@ -52,7 +51,7 @@ const MAX_TOKENS = 500;
 	// Step 4 : Intégrer tous les textes (embed).
     const textsEmbeddings = await cache_withFile(
         () => processEmbeddings(textsTokensShortened),
-        "processed/textsEmbeddings.json"
+        "processed/vuejs/textsEmbeddings.json"
     );
 	// Step 5 : Sauvegarder nos embeddings dans la base de données.
 	await saveToDatabase(textsEmbeddings);
